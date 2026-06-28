@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Chat Dashboard</title>
+    <script src="http://localhost:5000/socket.io/socket.io.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: linear-gradient(135deg, #0f172a, #1e293b); color: #f8fafc; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
+        .chat-container { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); width: 100%; max-width: 500px; height: 600px; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); display: flex; flex-direction: column; overflow: hidden; }
+        .chat-header { background: rgba(15, 23, 42, 0.4); padding: 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: space-between; align-items: center; }
+        .chat-header h2 { font-size: 1.3rem; color: #38bdf8; }
+        .status-dot { width: 10px; height: 10px; background: #10b981; border-radius: 50%; box-shadow: 0 0 8px #10b981; }
+        .messages-box { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+        .message { background: rgba(15, 23, 42, 0.5); padding: 10px 16px; border-radius: 16px; max-width: 80%; width: fit-content; border: 1px solid rgba(255, 255, 255, 0.05); }
+        .message .meta { font-size: 0.75rem; color: #38bdf8; font-weight: bold; margin-bottom: 3px; display: flex; gap: 8px; }
+        .message .meta span { color: #64748b; font-weight: normal; }
+        .message .text { font-size: 0.95rem; color: #e2e8f0; word-break: break-word; }
+        .input-area { padding: 20px; background: rgba(15, 23, 42, 0.4); border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; flex-direction: column; gap: 10px; }
+        .user-setup { display: flex; gap: 10px; }
+        .msg-setup { display: flex; gap: 10px; }
+        input { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: #fff; padding: 12px; font-size: 0.95rem; outline: none; }
+        input:focus { border-color: #38bdf8; }
+        #usernameInput { width: 130px; text-align: center; font-weight: 600; color: #38bdf8; }
+        #messageInput { flex: 1; }
+        button { background: #38bdf8; color: #0f172a; border: none; padding: 12px 24px; font-weight: bold; border-radius: 12px; cursor: pointer; transition: 0.2s; }
+        button:hover { background: #0ea5e9; transform: translateY(-1px); }
+    </style>
+</head>
+<body>
+
+    <div class="chat-container">
+        <div class="chat-header">
+            <h2>💬 Real-Time Hub</h2>
+            <div class="status-dot"></div>
+        </div>
+
+        <div class="messages-box" id="messagesBox">
+            </div>
+
+        <div class="input-area">
+            <div class="msg-setup">
+                <input type="text" id="usernameInput" placeholder="Your Name" value="User">
+                <input type="text" id="messageInput" placeholder="Type a message seamlessly..." onkeypress="handleKeyPress(event)">
+                <button onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Connect to our live local custom port 5000 server instance
+        const socket = io('http://localhost:5000');
+        const box = document.getElementById('messagesBox');
+
+        // Event listener: triggers whenever the backend broadcasts a message
+        socket.on('broadcast_message', (data) => {
+            const msgElement = document.createElement('div');
+            msgElement.classList.add('message');
+            
+            msgElement.innerHTML = `
+                <div class="meta">${data.username} <span>${data.time}</span></div>
+                <div class="text">${data.text}</div>
+            `;
+            
+            box.appendChild(msgElement);
+            box.scrollTop = box.scrollHeight; // Auto scroll to the newest message
+        });
+
+        function sendMessage() {
+            const userField = document.getElementById('usernameInput');
+            const msgField = document.getElementById('messageInput');
+
+            const username = userField.value.trim() || "Anonymous";
+            const text = msgField.value.trim();
+
+            if (!text) return;
+
+            // Emit the event packet up to the listening server logic
+            socket.emit('chat_message', { username, text });
+            msgField.value = ''; // Clean input
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') sendMessage();
+        }
+    </script>
+</body>
+</html>
